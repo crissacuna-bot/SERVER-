@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<header>
+    <nav class="menu">
+        <a href="index.html" class="link-menu">Home</a>
+        <a href="galeria.html" class="link-menu">galeria</a>
+        <a href="chat.html" class="link-menu">Chat</a>
+        <a href="cadastro.html" class="link-menu">Cadastro</a>
+        <a href="login.html" class="link-menu">Login</a>
+    </nav>
+</header>
+
+<main>
+    <div class="container-chat">
+
+    <h2 id="boasVindas"></h2>
+
+    <div class="janela-mensagens">
+        <div id="caixaChat"></div>
+    </div>
+
+    <form class="formulario-envio" id="formularioChat">
+        <input
+            type="text"
+            id="mensagem"
+            placeholder="Digite sua mensagem..."
+        >
+
+        <button type="submit" id="btnEnviar">
+            Enviar
+        </button>
+    </form>
+
+</div>
+
+</main>
+
+<script>
+   
+// Verificação básica para evitar abrir o chat sem login.
+const usuarioLogado = localStorage.getItem('usuario');
+
+if (!usuarioLogado) {
+    window.location.replace('index.html');
+}
+
+const boasVindas = document.querySelector('#boasVindas');
+const caixaChat = document.querySelector('#caixaChat');
+const formularioChat = document.querySelector('#formularioChat');
+const inputMensagem = document.querySelector('#mensagem');
+const btnEnviar = document.querySelector('#btnEnviar');
+
+boasVindas.textContent = `Olá, ${usuarioLogado}! Seja bem-vindo ao chat do Coelhão.`;
+
+
+const historicoConversa = [];
+
+function mensagemTela(autor, texto) {
+    const elemento = document.createElement('p');
+
+    elemento.className = 'msg';
+    elemento.textContent = `${autor}: ${texto}`;
+
+    caixaChat.appendChild(elemento);
+
+    
+    caixaChat.scrollTop = caixaChat.scrollHeight;
+}
+
+
+formularioChat.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+
+    const textoMensagem = inputMensagem.value.trim();
+
+    if (!textoMensagem || btnEnviar.disabled) {
+        return;
+    }
+
+    mensagemTela(usuarioLogado, textoMensagem);
+
+    historicoConversa.push({
+        role: 'user',
+        content: textoMensagem
+    });
+
+    inputMensagem.value = '';
+    btnEnviar.disabled = true;
+
+    try {
+        const respostaServidor = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                historico: historicoConversa
+            })
+        });
+
+        const dados = await respostaServidor.json();
+
+        if (!respostaServidor.ok) {
+            mensagemTela(
+                'Sistema',
+                dados.erro || `Erro do servidor (${respostaServidor.status}).`
+            );
+            return;
+        }
+
+       
+        mensagemTela('Coelhão', dados.resposta);
+
+        historicoConversa.push({
+            role: 'assistant',
+            content: dados.resposta
+        });
+
+    } catch (erro) {
+        console.error('Erro ao conectar ao chat:', erro);
+
+        mensagemTela(
+            'Sistema',
+            'Não foi possível conectar ao servidor. Verifique se ele está ligado.'
+        );
+    } finally {
+        btnEnviar.disabled = false;
+        inputMensagem.focus();
+    }
+});
+
+
+
+
+</script>
+
+<footer> &copy; Desenvolvido por  Criss Gimon Acuna - 2026 CEEP Curitiba</footer>
+
+</body>
+
+</html>
